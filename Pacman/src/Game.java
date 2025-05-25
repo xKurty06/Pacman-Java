@@ -24,8 +24,9 @@ public class Game extends JPanel implements ActionListener {
     private static class Ghost {
         int x, y, startX, startY;
         boolean alive = true;
+        int respawnTimer = 0;
         public Ghost(int x, int y) { this.x = x; this.y = y; this.startX = x; this.startY = y; }
-        public void reset() { x = startX; y = startY; alive = true; }
+        public void reset() { x = startX; y = startY; alive = true; respawnTimer = 0; }
     }
     private Ghost[] ghosts = {
         new Ghost(1, 1),
@@ -345,12 +346,19 @@ public class Game extends JPanel implements ActionListener {
                 }
             }
         }
-        // When ghost is eaten, return to house
+        // When ghost is eaten, return to house (but keep it invisible for a short time)
         for (Ghost ghost : ghosts) {
             if (!ghost.alive) {
-                ghost.x = ghost.startX;
-                ghost.y = ghost.startY;
-                ghost.alive = true;
+                if (ghost.respawnTimer == 0) {
+                    ghost.respawnTimer = 30; // frames to stay invisible
+                } else {
+                    ghost.respawnTimer--;
+                    if (ghost.respawnTimer == 0) {
+                        ghost.x = ghost.startX;
+                        ghost.y = ghost.startY;
+                        ghost.alive = true;
+                    }
+                }
             }
         }
         // Animate Pacman mouth
