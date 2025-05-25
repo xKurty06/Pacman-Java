@@ -2,7 +2,7 @@
 
 A modern, feature-rich Pacman game written in Java using Swing.
 
-> **This project was created by a group of 4 students from BSCS 1-2 to fulfill our final requirement in Computer Programming II, under Ms. Lourielene Baldomero.**
+> **This project was created by a group of 5 students from section BSCS 1-2 (A.Y. 2024-2025) to fulfill our final requirement in Computer Programming II, under Ms. Lourielene Baldomero.**
 
 **Group Members:**
 - Member 1: Zean Kurt Balboa
