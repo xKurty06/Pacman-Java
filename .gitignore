@@ -1,0 +1,40 @@
+# Java build and IDE files
+/bin/
+/build/
+/out/
+*.class
+*.jar
+*.war
+*.ear
+
+# VS Code
+.vscode/
+
+# IntelliJ IDEA
+.idea/
+*.iml
+
+# Eclipse
+.project
+.classpath
+.settings/
+
+# NetBeans
+nbproject/
+build/
+dist/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Misc
+*.swp
+*.swo
+
+# Ignore screenshots and user files
+screenshot.png
+*.tmp
