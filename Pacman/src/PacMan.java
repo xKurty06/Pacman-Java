@@ -102,8 +102,8 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
         "X    X   O   X    X",
         "XXXX XXXX XXXX XXXX",
         "XXXX X       X XXXX",
-        "XXXX X XXrXX X XXXX",
-        "XO      bpo      OX",
+        "XXXX X X r X X XXXX",
+        " O     XbpoX     O ",
         "XXXX X XXXXX X XXXX",
         "XXXX     O     XXXX",
         "XXXX X XXXXX X XXXX",
@@ -122,6 +122,12 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
     HashSet<Block> ghosts;
     HashSet<Block> powerups;
     Block pacman;
+    Block blueGhost; // Track blue ghost for initial direction
+    Block orangeGhost; // Track orange ghost for initial direction
+    java.util.List<Block> ghostList; // For ordered ghost release
+    int[] ghostReleaseTimers; // Timers for each ghost
+    boolean[] ghostPenExitPhase; // Track if ghost is in special pen-exit phase
+    int ghostReleaseInterval = 100; // 6 seconds at 20fps
 
     Timer gameLoop;
     char[] directions = {'U', 'D', 'L', 'R'}; //up down left right
@@ -131,11 +137,13 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
     boolean gameOver = false;
     boolean powerMode = false;
     int powerModeTicks = 0;
+    int[] ghostSlowCounters; // For slowing ghosts in power mode
 
     // Add buffered direction for smooth turning
-    private char bufferedDirection = 'R'; // Start moving right by default
+    private char bufferedDirection = 'U'; // Start moving up by default
 
     private JButton restartButton;
+    private JButton playAgainButton; // Button for win state
 
     PacMan() {
         setPreferredSize(new Dimension(boardWidth, boardHeight));
@@ -168,6 +176,13 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
         restartButton.setBounds(boardWidth/2 - 60, boardHeight/2, 120, 40);
         this.add(restartButton);
 
+        playAgainButton = new JButton("Play Again");
+        playAgainButton.setFocusable(false);
+        playAgainButton.setVisible(false);
+        playAgainButton.addActionListener(e -> restartGame());
+        playAgainButton.setBounds(boardWidth/2 - 70, boardHeight/2 + 40, 140, 40);
+        this.add(playAgainButton);
+
         loadMap();
         pacman.direction = 'U';
         pacman.updateVelocity();
@@ -182,18 +197,37 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
         gameLoop.start();
 
         // Set Pacman's initial direction and velocity after map load
-        pacman.direction = 'R';
+        pacman.direction = 'U';
         pacman.updateVelocity();
-        bufferedDirection = 'R';
+        bufferedDirection = 'U';
+        // Initialize ghost slow counters
+        ghostSlowCounters = new int[ghostList != null ? ghostList.size() : 4];
     }
 
     private void restartGame() {
         loadMap();
-        resetPositions();
+        // Now reset ghosts and all counters on full restart
+        for (int i = 0; i < ghostList.size(); i++) {
+            Block ghost = ghostList.get(i);
+            ghost.reset();
+            if (ghost == blueGhost) {
+                ghost.direction = 'R';
+            } else if (ghost == orangeGhost) {
+                ghost.direction = 'L';
+            } else {
+                ghost.direction = 'U';
+            }
+            ghost.updateVelocity();
+            ghostReleaseTimers[i] = ghostReleaseInterval * i; // Reset release timers
+            ghostPenExitPhase[i] = true;
+            ghostSlowCounters[i] = 0;
+        }
         lives = 3;
         score = 0;
         gameOver = false;
-        restartButton.setVisible(false);
+        powerMode = false;
+        powerModeTicks = 0;
+        playAgainButton.setVisible(false);
         gameLoop.start();
         requestFocusInWindow();
     }
@@ -203,15 +237,17 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
         foods = new HashSet<Block>();
         ghosts = new HashSet<Block>();
         powerups = new HashSet<Block>();
-
+        ghostList = new java.util.ArrayList<>();
+        Block redGhost = null;
+        blueGhost = null;
+        orangeGhost = null;
+        java.util.List<Block> otherGhosts = new java.util.ArrayList<>();
         for (int r = 0; r < rowCount; r++) {
             for (int c = 0; c < columnCount; c++) {
                 String row = tileMap[r];
                 char tileMapChar = row.charAt(c);
-
                 int x = c*tileSize;
                 int y = r*tileSize;
-
                 if (tileMapChar == 'X') { //block wall
                     Block wall = new Block(wallImage, x, y, tileSize, tileSize);
                     walls.add(wall);
@@ -219,18 +255,22 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
                 else if (tileMapChar == 'b') { //blue ghost
                     Block ghost = new Block(blueGhostImage, x, y, tileSize, tileSize);
                     ghosts.add(ghost);
+                    blueGhost = ghost;
                 }
                 else if (tileMapChar == 'o') { //orange ghost
                     Block ghost = new Block(orangeGhostImage, x, y, tileSize, tileSize);
                     ghosts.add(ghost);
+                    orangeGhost = ghost;
                 }
                 else if (tileMapChar == 'p') { //pink ghost
                     Block ghost = new Block(pinkGhostImage, x, y, tileSize, tileSize);
                     ghosts.add(ghost);
+                    otherGhosts.add(ghost);
                 }
                 else if (tileMapChar == 'r') { //red ghost
                     Block ghost = new Block(redGhostImage, x, y, tileSize, tileSize);
                     ghosts.add(ghost);
+                    redGhost = ghost;
                 }
                 else if (tileMapChar == 'P') { //pacman
                     pacman = new Block(pacmanRightImage, x, y, tileSize, tileSize);
@@ -244,6 +284,22 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
                     powerups.add(powerup);
                 }
             }
+        }
+        // Always put red, blue, orange, then others in ghostList
+        ghostList.clear();
+        if (redGhost != null) ghostList.add(redGhost);
+        if (blueGhost != null) ghostList.add(blueGhost);
+        if (orangeGhost != null) ghostList.add(orangeGhost);
+        ghostList.addAll(otherGhosts);
+        // Set up ghost release timers and pen-exit phase
+        ghostReleaseTimers = new int[ghostList.size()];
+        ghostPenExitPhase = new boolean[ghostList.size()];
+        // Initialize ghost slow counters
+        ghostSlowCounters = new int[ghostList.size()];
+        for (int i = 0; i < ghostReleaseTimers.length; i++) {
+            ghostReleaseTimers[i] = ghostReleaseInterval * i; // Staggered release
+            ghostPenExitPhase[i] = true; // All ghosts start in pen-exit phase
+            ghostSlowCounters[i] = 0;
         }
     }
 
@@ -312,8 +368,14 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
         if (gameOver) {
             g.drawString("Game Over: " + String.valueOf(score), tileSize/2, tileSize/2);
         }
-        else {
-            g.drawString("x" + String.valueOf(lives) + " Score: " + String.valueOf(score), tileSize/2, tileSize/2);
+        else if (playAgainButton.isVisible()) {
+            g.setFont(new Font("Arial", Font.BOLD, 40));
+            g.setColor(new Color(0, 200, 0));
+            g.drawString("YOU WON!", boardWidth/2 - 110, boardHeight/2 - 30);
+            g.setFont(new Font("Arial", Font.PLAIN, 22));
+            g.setColor(Color.WHITE);
+            g.drawString("Score: " + score, boardWidth/2 - 40, boardHeight/2);
+            g.drawString("Click Play Again to restart", boardWidth/2 - 110, boardHeight/2 + 30);
         }
         if (gameOver) {
             g.setFont(new Font("Arial", Font.BOLD, 32));
@@ -359,12 +421,18 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
         // Calculate next position
         int nextX = pacman.x + pacman.velocityX;
         int nextY = pacman.y + pacman.velocityY;
-        // Prevent Pacman from moving out of bounds
-        if (nextX < 0 || nextX + pacman.width > boardWidth || nextY < 0 || nextY + pacman.height > boardHeight) {
+        // Tunnel wrap: if Pacman goes off left/right edge, wrap to the other side
+        if (nextX + pacman.width <= 0) {
+            pacman.x = boardWidth - pacman.width;
+        } else if (nextX >= boardWidth) {
+            pacman.x = 0;
+        } else if (nextY < 0 || nextY + pacman.height > boardHeight) {
+            // Prevent Pacman from moving out of bounds vertically
             return;
+        } else {
+            pacman.x = nextX;
+            pacman.y = nextY;
         }
-        pacman.x = nextX;
-        pacman.y = nextY;
         setPacmanImageByDirection(pacman.direction);
 
         //check wall collisions
@@ -376,25 +444,53 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
             }
         }
 
-        //check ghost collisions
-        for (Block ghost : ghosts) {
-            if (collision(ghost, pacman)) {
-                if (powerMode) {
-                    score += 200;
-                    ghost.reset();
-                } else {
-                    lives--;
-                    if (lives <= 0) {
-                        gameOver = true;
-                        return;
-                    }
-                    resetPositions();
+        // Ghost release logic
+        for (int i = 0; i < ghostList.size(); i++) {
+            Block ghost = ghostList.get(i);
+            if (ghostReleaseTimers[i] > 0) {
+                ghostReleaseTimers[i]--;
+                continue;
+            }
+            // Pen exit phase: blue goes right, orange goes left, then up until out
+            if (ghostPenExitPhase[i]) {
+                // Only blue and orange: move one tile right/left, then up
+                if (ghost == blueGhost && ghost.direction != 'R' && ghost.x == blueGhost.startX && ghost.y == blueGhost.startY) {
+                    ghost.direction = 'R';
+                    ghost.updateVelocity();
+                } else if (ghost == orangeGhost && ghost.direction != 'L' && ghost.x == orangeGhost.startX && ghost.y == orangeGhost.startY) {
+                    ghost.direction = 'L';
+                    ghost.updateVelocity();
+                } else if (ghost.direction != 'U') {
+                    ghost.direction = 'U';
+                    ghost.updateVelocity();
                 }
+                // Move ghost
+                ghost.x += ghost.velocityX;
+                ghost.y += ghost.velocityY;
+                // For blue/orange, after moving one tile, switch to up
+                if (ghost == blueGhost && ghost.direction == 'R' && ghost.x >= blueGhost.startX + tileSize) {
+                    ghost.direction = 'U';
+                    ghost.updateVelocity();
+                } else if (ghost == orangeGhost && ghost.direction == 'L' && ghost.x <= orangeGhost.startX - tileSize) {
+                    ghost.direction = 'U';
+                    ghost.updateVelocity();
+                }
+                // If ghost is above the pen, exit pen-exit phase
+                if (ghost.y <= tileSize * 8) {
+                    ghostPenExitPhase[i] = false;
+                }
+                continue;
             }
-
-            if (ghost.y == tileSize*9 && ghost.direction != 'U' && ghost.direction != 'D') {
-                ghost.updateDirection('U');
+            // Make ghosts slower in power mode (move 2 out of every 3 frames)
+            if (powerMode) {
+                ghostSlowCounters[i] = (ghostSlowCounters[i] + 1) % 3;
+                if (ghostSlowCounters[i] == 2) {
+                    continue; // Skip this frame for this ghost (move on 0,1; skip on 2)
+                }
+            } else {
+                ghostSlowCounters[i] = 0; // Reset when not in power mode
             }
+            // Move ghost as normal
             ghost.x += ghost.velocityX;
             ghost.y += ghost.velocityY;
             for (Block wall : walls) {
@@ -403,6 +499,27 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
                     ghost.y -= ghost.velocityY;
                     char newDirection = directions[random.nextInt(4)];
                     ghost.updateDirection(newDirection);
+                }
+            }
+        }
+
+        //check ghost collisions
+        for (int i = 0; i < ghostList.size(); i++) {
+            Block ghost = ghostList.get(i);
+            if (ghostReleaseTimers[i] > 0) continue; // Not yet released
+            if (collision(ghost, pacman)) {
+                if (powerMode) {
+                    score += 200;
+                    ghost.reset();
+                    ghostReleaseTimers[i] = ghostReleaseInterval * (i+1); // Send back to pen, delay again
+                } else {
+                    lives--;
+                    if (lives <= 0) {
+                        gameOver = true;
+                        return;
+                    }
+                    resetPositions();
+                    return;
                 }
             }
         }
@@ -433,8 +550,9 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
         }
 
         if (foods.isEmpty()) {
-            loadMap();
-            resetPositions();
+            playAgainButton.setVisible(true);
+            gameLoop.stop();
+            return;
         }
 
         if (powerMode) {
@@ -478,18 +596,28 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
     }
 
     public void resetPositions() {
-        pacman.reset();
+        // Respawn Pacman at pink ghost's spawn location
+        Block pinkGhost = null;
+        for (Block ghost : ghostList) {
+            if (ghost.image == pinkGhostImage) {
+                pinkGhost = ghost;
+                break;
+            }
+        }
+        if (pinkGhost != null) {
+            pacman.x = pinkGhost.startX;
+            pacman.y = pinkGhost.startY;
+        } else {
+            pacman.reset(); // fallback
+        }
         pacman.velocityX = 0;
         pacman.velocityY = 0;
         pacman.direction = 'U';
         pacman.updateVelocity();
         setPacmanImageByDirection('U');
         bufferedDirection = 'U';
-        for (Block ghost : ghosts) {
-            ghost.reset();
-            char newDirection = directions[random.nextInt(4)];
-            ghost.updateDirection(newDirection);
-        }
+        // Do NOT reset ghosts here; ghosts remain where they are
+        // Only reset ghost release/pen/slow counters on full game restart
     }
 
     @Override
@@ -501,6 +629,9 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
             restartButton.setVisible(true);
             restartButton.requestFocusInWindow();
         }
+        if (playAgainButton.isVisible()) {
+            playAgainButton.requestFocusInWindow();
+        }
     }
 
     @Override
@@ -511,7 +642,7 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
 
     @Override
     public void keyReleased(KeyEvent e) {
-        if (gameOver) {
+        if (gameOver || playAgainButton.isVisible()) {
             // Do nothing, use button to restart
             return;
         }
