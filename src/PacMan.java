@@ -147,7 +147,7 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
 
     PacMan() {
         setPreferredSize(new Dimension(boardWidth, boardHeight));
-        setBackground(Color.BLACK);
+        setBackground(new Color(139, 69, 19)); // Brown color
         addKeyListener(this);
         setFocusable(true);
 
@@ -163,8 +163,9 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
         pacmanLeftImage = new ImageIcon(getClass().getResource("/assets/pacman-left.png")).getImage();
         pacmanRightImage = new ImageIcon(getClass().getResource("/assets/pacman-right.png")).getImage();
 
+        // Pellets (food) and powerups
         cherryImage = new ImageIcon(getClass().getResource("/assets/food.PNG")).getImage();
-        cherry2Image = new ImageIcon(getClass().getResource("/assets/food.PNG")).getImage(); // Use same food image for both
+        cherry2Image = cherryImage;
         powerFoodImage = new ImageIcon(getClass().getResource("/assets/powerup.png")).getImage();
         scaredBeeImage = new ImageIcon(getClass().getResource("/assets/bee-5.png")).getImage();
 
@@ -278,11 +279,11 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
                     pacman = new Block(pacmanRightImage, x, y, tileSize, tileSize);
                 }
                 else if (tileMapChar == ' ') { //food
-                    Block food = new Block(null, x + 14, y + 14, 4, 4);
+                    Block food = new Block(cherryImage, x + 14, y + 14, 4, 4);
                     foods.add(food);
                 }
                 else if (tileMapChar == 'O') { //powerup
-                    Block powerup = new Block(null, x + 8, y + 8, 16, 16);
+                    Block powerup = new Block(powerFoodImage, x + 8, y + 8, 16, 16);
                     powerups.add(powerup);
                 }
             }
@@ -326,22 +327,23 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
             g.drawImage(wall.image, wall.x, wall.y, wall.width, wall.height, null);
         }
 
-        g.setColor(Color.WHITE);
+        // Draw pellets (food)
         for (Block food : foods) {
-            g.fillRect(food.x, food.y, food.width, food.height);
+            if (food.image != null) {
+                g.drawImage(food.image, food.x - 4, food.y - 4, 12, 12, null); // Smaller and centered food.PNG
+            } else {
+                g.setColor(Color.WHITE);
+                g.fillRect(food.x, food.y, 4, 4);
+            }
         }
-        // Draw powerups: alternate cherry and cherry2
-        int idx = 0;
+        // Draw powerups
         for (Block powerup : powerups) {
-            if (idx % 2 == 0 && cherryImage != null) {
-                g.drawImage(cherryImage, powerup.x, powerup.y, powerup.width, powerup.height, null);
-            } else if (cherry2Image != null) {
-                g.drawImage(cherry2Image, powerup.x, powerup.y, powerup.width, powerup.height, null);
+            if (powerup.image != null) {
+                g.drawImage(powerup.image, powerup.x - 4, powerup.y - 4, 24, 24, null); // Center and scale powerup.png
             } else {
                 g.setColor(Color.YELLOW);
                 g.fillOval(powerup.x, powerup.y, powerup.width, powerup.height);
             }
-            idx++;
         }
         // Powerup effect indicator using powerFood.png
         if (powerMode) {
