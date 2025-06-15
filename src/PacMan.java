@@ -76,10 +76,10 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
     private int boardHeight = rowCount * tileSize;
 
     private Image wallImage;
-    private Image blueGhostImage;
-    private Image orangeGhostImage;
-    private Image pinkGhostImage;
-    private Image redGhostImage;
+    private Image yellowBeeImage;
+    private Image orangeBeeImage;
+    private Image yellowOrangeBeeImage; // New image for yellow-orange bee
+    private Image redBeeImage;
 
     private Image pacmanUpImage;
     private Image pacmanDownImage;
@@ -89,10 +89,10 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
     private Image cherryImage;
     private Image cherry2Image;
     private Image powerFoodImage;
-    private Image scaredGhostImage;
+    private Image scaredBeeImage;
 
     //X = wall, O = skip, P = pac man, ' ' = food
-    //Ghosts: b = blue, o = orange, p = pink, r = red
+    //Bees: b = blue, o = orange, p = pink, r = red
     private String[] tileMap = {
         "XXXXXXXXXXXXXXXXXXX",
         "XO       X       OX",
@@ -119,15 +119,15 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
 
     HashSet<Block> walls;
     HashSet<Block> foods;
-    HashSet<Block> ghosts;
+    HashSet<Block> bees;
     HashSet<Block> powerups;
     Block pacman;
-    Block blueGhost; // Track blue ghost for initial direction
-    Block orangeGhost; // Track orange ghost for initial direction
-    java.util.List<Block> ghostList; // For ordered ghost release
-    int[] ghostReleaseTimers; // Timers for each ghost
-    boolean[] ghostPenExitPhase; // Track if ghost is in special pen-exit phase
-    int ghostReleaseInterval = 100; // 6 seconds at 20fps
+    Block yellowBee; // Track yellow bee for initial direction
+    Block orangeBee; // Track orange bee for initial direction
+    java.util.List<Block> beeList; // For ordered bee release
+    int[] beeReleaseTimers; // Timers for each bee
+    boolean[] beePenExitPhase; // Track if bee is in special pen-exit phase
+    int beeReleaseInterval = 100; // 6 seconds at 20fps
 
     Timer gameLoop;
     char[] directions = {'U', 'D', 'L', 'R'}; //up down left right
@@ -137,7 +137,7 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
     boolean gameOver = false;
     boolean powerMode = false;
     int powerModeTicks = 0;
-    int[] ghostSlowCounters; // For slowing ghosts in power mode
+    int[] beeslowCounters; // For slowing bees in power mode
 
     // Add buffered direction for smooth turning
     private char bufferedDirection = 'U'; // Start moving up by default
@@ -152,21 +152,21 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
         setFocusable(true);
 
         //load images
-        wallImage = new ImageIcon(getClass().getResource("/assets/wall.png")).getImage();
-        blueGhostImage = new ImageIcon(getClass().getResource("/assets/blueGhost.png")).getImage();
-        orangeGhostImage = new ImageIcon(getClass().getResource("/assets/orangeGhost.png")).getImage();
-        pinkGhostImage = new ImageIcon(getClass().getResource("/assets/pinkGhost.png")).getImage();
-        redGhostImage = new ImageIcon(getClass().getResource("/assets/redGhost.png")).getImage();
+        wallImage = new ImageIcon(getClass().getResource("/assets/wall.PNG")).getImage();
+        yellowBeeImage = new ImageIcon(getClass().getResource("/assets/bee-1.png")).getImage();
+        yellowOrangeBeeImage = new ImageIcon(getClass().getResource("/assets/bee-2.png")).getImage();
+        orangeBeeImage = new ImageIcon(getClass().getResource("/assets/bee-3.PNG")).getImage();
+        redBeeImage = new ImageIcon(getClass().getResource("/assets/bee-4.PNG")).getImage();
 
-        pacmanUpImage = new ImageIcon(getClass().getResource("/assets/pacmanUp.png")).getImage();
-        pacmanDownImage = new ImageIcon(getClass().getResource("/assets/pacmanDown.png")).getImage();
-        pacmanLeftImage = new ImageIcon(getClass().getResource("/assets/pacmanLeft.png")).getImage();
-        pacmanRightImage = new ImageIcon(getClass().getResource("/assets/pacmanRight.png")).getImage();
+        pacmanUpImage = new ImageIcon(getClass().getResource("/assets/pacman-up.png")).getImage();
+        pacmanDownImage = new ImageIcon(getClass().getResource("/assets/pacman-down.png")).getImage();
+        pacmanLeftImage = new ImageIcon(getClass().getResource("/assets/pacman-left.png")).getImage();
+        pacmanRightImage = new ImageIcon(getClass().getResource("/assets/pacman-right.png")).getImage();
 
-        cherryImage = new ImageIcon(getClass().getResource("/assets/cherry.png")).getImage();
-        cherry2Image = new ImageIcon(getClass().getResource("/assets/cherry2.png")).getImage();
-        powerFoodImage = new ImageIcon(getClass().getResource("/assets/powerFood.png")).getImage();
-        scaredGhostImage = new ImageIcon(getClass().getResource("/assets/scaredGhost.png")).getImage();
+        cherryImage = new ImageIcon(getClass().getResource("/assets/food.PNG")).getImage();
+        cherry2Image = new ImageIcon(getClass().getResource("/assets/food.PNG")).getImage(); // Use same food image for both
+        powerFoodImage = new ImageIcon(getClass().getResource("/assets/powerup.png")).getImage();
+        scaredBeeImage = new ImageIcon(getClass().getResource("/assets/bee-5.png")).getImage();
 
         restartButton = new JButton("Restart");
         restartButton.setFocusable(false);
@@ -188,9 +188,9 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
         pacman.updateVelocity();
         setPacmanImageByDirection('U');
         bufferedDirection = 'U';
-        for (Block ghost : ghosts) {
+        for (Block bee : bees) {
             char newDirection = directions[random.nextInt(4)];
-            ghost.updateDirection(newDirection);
+            bee.updateDirection(newDirection);
         }
         //how long it takes to start timer, milliseconds gone between frames
         gameLoop = new Timer(50, this); //20fps (1000/50)
@@ -200,27 +200,29 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
         pacman.direction = 'U';
         pacman.updateVelocity();
         bufferedDirection = 'U';
-        // Initialize ghost slow counters
-        ghostSlowCounters = new int[ghostList != null ? ghostList.size() : 4];
+        // Initialize bee slow counters
+        beeslowCounters = new int[beeList != null ? beeList.size() : 4];
     }
 
     private void restartGame() {
+        restartButton.setVisible(false);
+        playAgainButton.setVisible(false);
         loadMap();
-        // Now reset ghosts and all counters on full restart
-        for (int i = 0; i < ghostList.size(); i++) {
-            Block ghost = ghostList.get(i);
-            ghost.reset();
-            if (ghost == blueGhost) {
-                ghost.direction = 'R';
-            } else if (ghost == orangeGhost) {
-                ghost.direction = 'L';
+        // Now reset bees and all counters on full restart
+        for (int i = 0; i < beeList.size(); i++) {
+            Block bee = beeList.get(i);
+            bee.reset();
+            if (bee == yellowBee) {
+                bee.direction = 'R';
+            } else if (bee == orangeBee) {
+                bee.direction = 'L';
             } else {
-                ghost.direction = 'U';
+                bee.direction = 'U';
             }
-            ghost.updateVelocity();
-            ghostReleaseTimers[i] = ghostReleaseInterval * i; // Reset release timers
-            ghostPenExitPhase[i] = true;
-            ghostSlowCounters[i] = 0;
+            bee.updateVelocity();
+            beeReleaseTimers[i] = beeReleaseInterval * i; // Reset release timers
+            beePenExitPhase[i] = true;
+            beeslowCounters[i] = 0;
         }
         lives = 3;
         score = 0;
@@ -235,13 +237,13 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
     public void loadMap() {
         walls = new HashSet<Block>();
         foods = new HashSet<Block>();
-        ghosts = new HashSet<Block>();
+        bees = new HashSet<Block>();
         powerups = new HashSet<Block>();
-        ghostList = new java.util.ArrayList<>();
-        Block redGhost = null;
-        blueGhost = null;
-        orangeGhost = null;
-        java.util.List<Block> otherGhosts = new java.util.ArrayList<>();
+        beeList = new java.util.ArrayList<>();
+        Block redBee = null;
+        yellowBee = null;
+        orangeBee = null;
+        java.util.List<Block> otherBees = new java.util.ArrayList<>();
         for (int r = 0; r < rowCount; r++) {
             for (int c = 0; c < columnCount; c++) {
                 String row = tileMap[r];
@@ -252,25 +254,25 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
                     Block wall = new Block(wallImage, x, y, tileSize, tileSize);
                     walls.add(wall);
                 }
-                else if (tileMapChar == 'b') { //blue ghost
-                    Block ghost = new Block(blueGhostImage, x, y, tileSize, tileSize);
-                    ghosts.add(ghost);
-                    blueGhost = ghost;
+                else if (tileMapChar == 'b') { //blue bee
+                    Block bee = new Block(yellowBeeImage, x, y, tileSize, tileSize);
+                    bees.add(bee);
+                    yellowBee = bee;
                 }
-                else if (tileMapChar == 'o') { //orange ghost
-                    Block ghost = new Block(orangeGhostImage, x, y, tileSize, tileSize);
-                    ghosts.add(ghost);
-                    orangeGhost = ghost;
+                else if (tileMapChar == 'o') { //orange bee
+                    Block bee = new Block(orangeBeeImage, x, y, tileSize, tileSize);
+                    bees.add(bee);
+                    orangeBee = bee;
                 }
-                else if (tileMapChar == 'p') { //pink ghost
-                    Block ghost = new Block(pinkGhostImage, x, y, tileSize, tileSize);
-                    ghosts.add(ghost);
-                    otherGhosts.add(ghost);
+                else if (tileMapChar == 'p') { //pink bee (now yellow-orange bee)
+                    Block bee = new Block(yellowOrangeBeeImage, x, y, tileSize, tileSize);
+                    bees.add(bee);
+                    otherBees.add(bee);
                 }
-                else if (tileMapChar == 'r') { //red ghost
-                    Block ghost = new Block(redGhostImage, x, y, tileSize, tileSize);
-                    ghosts.add(ghost);
-                    redGhost = ghost;
+                else if (tileMapChar == 'r') { //red bee
+                    Block bee = new Block(redBeeImage, x, y, tileSize, tileSize);
+                    bees.add(bee);
+                    redBee = bee;
                 }
                 else if (tileMapChar == 'P') { //pacman
                     pacman = new Block(pacmanRightImage, x, y, tileSize, tileSize);
@@ -285,21 +287,21 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
                 }
             }
         }
-        // Always put red, blue, orange, then others in ghostList
-        ghostList.clear();
-        if (redGhost != null) ghostList.add(redGhost);
-        if (blueGhost != null) ghostList.add(blueGhost);
-        if (orangeGhost != null) ghostList.add(orangeGhost);
-        ghostList.addAll(otherGhosts);
-        // Set up ghost release timers and pen-exit phase
-        ghostReleaseTimers = new int[ghostList.size()];
-        ghostPenExitPhase = new boolean[ghostList.size()];
-        // Initialize ghost slow counters
-        ghostSlowCounters = new int[ghostList.size()];
-        for (int i = 0; i < ghostReleaseTimers.length; i++) {
-            ghostReleaseTimers[i] = ghostReleaseInterval * i; // Staggered release
-            ghostPenExitPhase[i] = true; // All ghosts start in pen-exit phase
-            ghostSlowCounters[i] = 0;
+        // Always put red, blue, orange, then others in beeList
+        beeList.clear();
+        if (redBee != null) beeList.add(redBee);
+        if (yellowBee != null) beeList.add(yellowBee);
+        if (orangeBee != null) beeList.add(orangeBee);
+        beeList.addAll(otherBees);
+        // Set up bee release timers and pen-exit phase
+        beeReleaseTimers = new int[beeList.size()];
+        beePenExitPhase = new boolean[beeList.size()];
+        // Initialize bee slow counters
+        beeslowCounters = new int[beeList.size()];
+        for (int i = 0; i < beeReleaseTimers.length; i++) {
+            beeReleaseTimers[i] = beeReleaseInterval * i; // Staggered release
+            beePenExitPhase[i] = true; // All bees start in pen-exit phase
+            beeslowCounters[i] = 0;
         }
     }
 
@@ -311,12 +313,12 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
     public void draw(Graphics g) {
         g.drawImage(pacman.image, pacman.x, pacman.y, pacman.width, pacman.height, null);
 
-        // Draw ghosts: if powerMode, use scaredGhost.png
-        for (Block ghost : ghosts) {
-            if (powerMode && scaredGhostImage != null) {
-                g.drawImage(scaredGhostImage, ghost.x, ghost.y, ghost.width, ghost.height, null);
+        // Draw bees: if powerMode, use scaredBee.png
+        for (Block bee : bees) {
+            if (powerMode && scaredBeeImage != null) {
+                g.drawImage(scaredBeeImage, bee.x, bee.y, bee.width, bee.height, null);
             } else {
-                g.drawImage(ghost.image, ghost.x, ghost.y, ghost.width, ghost.height, null);
+                g.drawImage(bee.image, bee.x, bee.y, bee.width, bee.height, null);
             }
         }
 
@@ -444,74 +446,74 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
             }
         }
 
-        // Ghost release logic
-        for (int i = 0; i < ghostList.size(); i++) {
-            Block ghost = ghostList.get(i);
-            if (ghostReleaseTimers[i] > 0) {
-                ghostReleaseTimers[i]--;
+        // Bee release logic
+        for (int i = 0; i < beeList.size(); i++) {
+            Block bee = beeList.get(i);
+            if (beeReleaseTimers[i] > 0) {
+                beeReleaseTimers[i]--;
                 continue;
             }
             // Pen exit phase: blue goes right, orange goes left, then up until out
-            if (ghostPenExitPhase[i]) {
+            if (beePenExitPhase[i]) {
                 // Only blue and orange: move one tile right/left, then up
-                if (ghost == blueGhost && ghost.direction != 'R' && ghost.x == blueGhost.startX && ghost.y == blueGhost.startY) {
-                    ghost.direction = 'R';
-                    ghost.updateVelocity();
-                } else if (ghost == orangeGhost && ghost.direction != 'L' && ghost.x == orangeGhost.startX && ghost.y == orangeGhost.startY) {
-                    ghost.direction = 'L';
-                    ghost.updateVelocity();
-                } else if (ghost.direction != 'U') {
-                    ghost.direction = 'U';
-                    ghost.updateVelocity();
+                if (bee == yellowBee && bee.direction != 'R' && bee.x == yellowBee.startX && bee.y == yellowBee.startY) {
+                    bee.direction = 'R';
+                    bee.updateVelocity();
+                } else if (bee == orangeBee && bee.direction != 'L' && bee.x == orangeBee.startX && bee.y == orangeBee.startY) {
+                    bee.direction = 'L';
+                    bee.updateVelocity();
+                } else if (bee.direction != 'U') {
+                    bee.direction = 'U';
+                    bee.updateVelocity();
                 }
-                // Move ghost
-                ghost.x += ghost.velocityX;
-                ghost.y += ghost.velocityY;
+                // Move bee
+                bee.x += bee.velocityX;
+                bee.y += bee.velocityY;
                 // For blue/orange, after moving one tile, switch to up
-                if (ghost == blueGhost && ghost.direction == 'R' && ghost.x >= blueGhost.startX + tileSize) {
-                    ghost.direction = 'U';
-                    ghost.updateVelocity();
-                } else if (ghost == orangeGhost && ghost.direction == 'L' && ghost.x <= orangeGhost.startX - tileSize) {
-                    ghost.direction = 'U';
-                    ghost.updateVelocity();
+                if (bee == yellowBee && bee.direction == 'R' && bee.x >= yellowBee.startX + tileSize) {
+                    bee.direction = 'U';
+                    bee.updateVelocity();
+                } else if (bee == orangeBee && bee.direction == 'L' && bee.x <= orangeBee.startX - tileSize) {
+                    bee.direction = 'U';
+                    bee.updateVelocity();
                 }
-                // If ghost is above the pen, exit pen-exit phase
-                if (ghost.y <= tileSize * 8) {
-                    ghostPenExitPhase[i] = false;
+                // If bee is above the pen, exit pen-exit phase
+                if (bee.y <= tileSize * 8) {
+                    beePenExitPhase[i] = false;
                 }
                 continue;
             }
-            // Make ghosts slower in power mode (move 2 out of every 3 frames)
+            // Make bees slower in power mode (move 2 out of every 3 frames)
             if (powerMode) {
-                ghostSlowCounters[i] = (ghostSlowCounters[i] + 1) % 3;
-                if (ghostSlowCounters[i] == 2) {
-                    continue; // Skip this frame for this ghost (move on 0,1; skip on 2)
+                beeslowCounters[i] = (beeslowCounters[i] + 1) % 3;
+                if (beeslowCounters[i] == 2) {
+                    continue; // Skip this frame for this bee (move on 0,1; skip on 2)
                 }
             } else {
-                ghostSlowCounters[i] = 0; // Reset when not in power mode
+                beeslowCounters[i] = 0; // Reset when not in power mode
             }
-            // Move ghost as normal
-            ghost.x += ghost.velocityX;
-            ghost.y += ghost.velocityY;
+            // Move bee as normal
+            bee.x += bee.velocityX;
+            bee.y += bee.velocityY;
             for (Block wall : walls) {
-                if (collision(ghost, wall) || ghost.x <= 0 || ghost.x + ghost.width >= boardWidth) {
-                    ghost.x -= ghost.velocityX;
-                    ghost.y -= ghost.velocityY;
+                if (collision(bee, wall) || bee.x <= 0 || bee.x + bee.width >= boardWidth) {
+                    bee.x -= bee.velocityX;
+                    bee.y -= bee.velocityY;
                     char newDirection = directions[random.nextInt(4)];
-                    ghost.updateDirection(newDirection);
+                    bee.updateDirection(newDirection);
                 }
             }
         }
 
-        //check ghost collisions
-        for (int i = 0; i < ghostList.size(); i++) {
-            Block ghost = ghostList.get(i);
-            if (ghostReleaseTimers[i] > 0) continue; // Not yet released
-            if (collision(ghost, pacman)) {
+        //check bee collisions
+        for (int i = 0; i < beeList.size(); i++) {
+            Block bee = beeList.get(i);
+            if (beeReleaseTimers[i] > 0) continue; // Not yet released
+            if (collision(bee, pacman)) {
                 if (powerMode) {
                     score += 200;
-                    ghost.reset();
-                    ghostReleaseTimers[i] = ghostReleaseInterval * (i+1); // Send back to pen, delay again
+                    bee.reset();
+                    // Do NOT reset beeReleaseTimers[i] here; bee respawns immediately
                 } else {
                     lives--;
                     if (lives <= 0) {
@@ -564,7 +566,7 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
     }
 
     private void spawnRandomCherry() {
-        // Find all empty tiles (no wall, no food, no powerup, no pacman, no ghost)
+        // Find all empty tiles (no wall, no food, no powerup, no pacman, no bee)
         java.util.List<int[]> emptyTiles = new java.util.ArrayList<>();
         for (int r = 0; r < rowCount; r++) {
             for (int c = 0; c < columnCount; c++) {
@@ -575,7 +577,7 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
                 for (Block food : foods) if (food.x == x + 14 && food.y == y + 14) occupied = true;
                 for (Block powerup : powerups) if (powerup.x == x + 8 && powerup.y == y + 8) occupied = true;
                 if (pacman.x == x && pacman.y == y) occupied = true;
-                for (Block ghost : ghosts) if (ghost.x == x && ghost.y == y) occupied = true;
+                for (Block bee : bees) if (bee.x == x && bee.y == y) occupied = true;
                 if (!occupied) emptyTiles.add(new int[]{x, y});
             }
         }
@@ -596,19 +598,20 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
     }
 
     public void resetPositions() {
-        // Respawn Pacman at pink ghost's spawn location
-        Block pinkGhost = null;
-        for (Block ghost : ghostList) {
-            if (ghost.image == pinkGhostImage) {
-                pinkGhost = ghost;
+        // Respawn Pacman at pink bee's spawn location
+        Block pinkBee = null;
+        for (Block bee : beeList) {
+            if (bee.image == yellowOrangeBeeImage) {
+                pinkBee = bee;
                 break;
             }
         }
-        if (pinkGhost != null) {
-            pacman.x = pinkGhost.startX;
-            pacman.y = pinkGhost.startY;
+        if (pinkBee != null) {
+            pacman.x = pinkBee.startX;
+            pacman.y = pinkBee.startY - 4 * tileSize;
         } else {
             pacman.reset(); // fallback
+            pacman.y -= 4 * tileSize;
         }
         pacman.velocityX = 0;
         pacman.velocityY = 0;
@@ -616,8 +619,8 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
         pacman.updateVelocity();
         setPacmanImageByDirection('U');
         bufferedDirection = 'U';
-        // Do NOT reset ghosts here; ghosts remain where they are
-        // Only reset ghost release/pen/slow counters on full game restart
+        // Do NOT reset bees here; bees remain where they are
+        // Only reset bee release/pen/slow counters on full game restart
     }
 
     @Override
