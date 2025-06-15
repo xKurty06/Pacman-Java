@@ -158,10 +158,10 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
         orangeBeeImage = new ImageIcon(getClass().getResource("/assets/bee-3.PNG")).getImage();
         redBeeImage = new ImageIcon(getClass().getResource("/assets/bee-4.PNG")).getImage();
 
-        pacmanUpImage = new ImageIcon(getClass().getResource("/assets/pacman-up.png")).getImage();
-        pacmanDownImage = new ImageIcon(getClass().getResource("/assets/pacman-down.png")).getImage();
-        pacmanLeftImage = new ImageIcon(getClass().getResource("/assets/pacman-left.png")).getImage();
-        pacmanRightImage = new ImageIcon(getClass().getResource("/assets/pacman-right.png")).getImage();
+        pacmanUpImage = new ImageIcon(getClass().getResource("/assets/butterfly-up.png")).getImage();
+        pacmanDownImage = new ImageIcon(getClass().getResource("/assets/butterfly-down.png")).getImage();
+        pacmanLeftImage = new ImageIcon(getClass().getResource("/assets/butterfly-left.png")).getImage();
+        pacmanRightImage = new ImageIcon(getClass().getResource("/assets/butterfly-right.png")).getImage();
 
         // Pellets (food) and powerups
         cherryImage = new ImageIcon(getClass().getResource("/assets/food.PNG")).getImage();

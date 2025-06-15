@@ -1,6 +1,13 @@
-# Pacman-Java
+# Pollen Panic (Pacman-Java)
 
-A modern, feature-rich Pacman game written in Java using Swing.
+A modern, feature-rich Pacman-inspired game with a butterfly and bee theme, written in Java using Swing.
+
+> **Theme:**
+> - The main character is a butterfly (replacing Pacman).
+> - The enemies are bees (replacing ghosts).
+> - The pellets are pollen, and the powerups are flowers.
+> - The maze walls are designed to look like honeycomb blocks.
+> - All models and sprites (butterfly, bees, pollen, flowers, leaves walls) are custom-made by Jossanah Ellaine Peji.
 
 > **This project was created by a group of 5 students from section BSCS 1-2 (A.Y. 2024-2025) to fulfill our final requirement in Computer Programming II (DCIT23), under Ms. Lourielene Baldomero.**
 
@@ -88,9 +95,28 @@ A modern, feature-rich Pacman game written in Java using Swing.
 ## Screenshots
 ![Pacman-Java Screenshot](/src/assets/screenshot.png)
 
+## Sample Sprites
+
+Below are individual sample images for the main game models. All images are located in the `src/assets/` folder.
+
+| Sprite         | Filename                |
+| -------------- | ----------------------- |
+| Butterfly Down | ![butterfly-down](src/assets/butterfly-down.png) |
+| Butterfly Up   | ![butterfly-up](src/assets/butterfly-up.png)     |
+| Butterfly Left | ![butterfly-left](src/assets/butterfly-left.png) |
+| Butterfly Right| ![butterfly-right](src/assets/butterfly-right.png)|
+| Bee 1          | ![bee-1](src/assets/bee-1.png)                   |
+| Bee 2          | ![bee-2](src/assets/bee-2.png)                   |
+| Bee 3          | ![bee-3](src/assets/bee-3.PNG)                   |
+| Bee 4          | ![bee-4](src/assets/bee-4.PNG)                   |
+| Scared Bee     | ![bee-5](src/assets/bee-5.png)                   |
+| Pollen         | ![pollen](src/assets/food.PNG)                   |
+| Flower         | ![flower](src/assets/powerup.png)                |
+| Wall (Leaves)| ![wall](src/assets/wall.png)                    |
+
 ## License
 This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
 
 ---
 
-Enjoy playing Pacman in Java! Contributions and suggestions are welcome.
+Enjoy playing Pacman in Java!
