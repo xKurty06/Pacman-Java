@@ -33,7 +33,7 @@ A modern, feature-rich Pacman game written in Java using Swing.
 - Restart button: Restart the game
 
 ## Screenshots
-![Pacman-Java Screenshot](screenshot.png)
+![Pacman-Java Screenshot](/src/assets/screenshot.png)
 
 ## License
 This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
