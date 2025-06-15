@@ -147,7 +147,7 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
 
     PacMan() {
         setPreferredSize(new Dimension(boardWidth, boardHeight));
-        setBackground(new Color(139, 69, 19)); // Brown color
+        setBackground(Color.BLACK); // Black color
         addKeyListener(this);
         setFocusable(true);
 
