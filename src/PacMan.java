@@ -97,9 +97,9 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
         "XXXXXXXXXXXXXXXXXXX",
         "XO       X       OX",
         "X XX XXX X XXX XX X",
-        "X                 X",
+        "X        O        X",
         "X XX X XXXXX X XX X",
-        "X    X   O   X    X",
+        "X    X       X    X",
         "XXXX XXXX XXXX XXXX",
         "XXXX X       X XXXX",
         "XXXX X X r X X XXXX",
@@ -174,7 +174,7 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
         restartButton.setVisible(false);
         restartButton.addActionListener(e -> restartGame());
         this.setLayout(null);
-        restartButton.setBounds(boardWidth/2 - 60, boardHeight/2, 120, 40);
+        restartButton.setBounds(boardWidth/2 - 70, boardHeight/2 + 40, 140, 40);
         this.add(restartButton);
 
         playAgainButton = new JButton("Play Again");
@@ -373,22 +373,22 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
             g.drawString("Game Over: " + String.valueOf(score), tileSize/2, tileSize/2);
         }
         else if (playAgainButton.isVisible()) {
-            g.setFont(new Font("Arial", Font.BOLD, 40));
+            g.setFont(new Font("Arial", Font.BOLD, 32));
             g.setColor(new Color(0, 200, 0));
-            g.drawString("YOU WON!", boardWidth/2 - 110, boardHeight/2 - 30);
-            g.setFont(new Font("Arial", Font.PLAIN, 22));
+            g.drawString("YOU WON!", boardWidth/2 - 80, boardHeight/2 - 20);
+            g.setFont(new Font("Arial", Font.PLAIN, 18));
             g.setColor(Color.WHITE);
-            g.drawString("Score: " + score, boardWidth/2 - 40, boardHeight/2);
-            g.drawString("Click Play Again to restart", boardWidth/2 - 110, boardHeight/2 + 30);
+            g.drawString("Score: " + score, boardWidth/2 - 40, boardHeight/2 + 20);
+            g.drawString("Click Play Again to restart", boardWidth/2 - 100, boardHeight/2 + 110);
         }
         if (gameOver) {
             g.setFont(new Font("Arial", Font.BOLD, 32));
             g.setColor(Color.RED);
-            g.drawString("Game Over", boardWidth/2 - 90, boardHeight/2 - 30);
+            g.drawString("Game Over", boardWidth/2 - 80, boardHeight/2 - 20);
             g.setFont(new Font("Arial", Font.PLAIN, 18));
             g.setColor(Color.WHITE);
-            g.drawString("Score: " + score, boardWidth/2 - 40, boardHeight/2);
-            g.drawString("Click Restart to play again", boardWidth/2 - 90, boardHeight/2 + 30);
+            g.drawString("Score: " + score, boardWidth/2 - 40, boardHeight/2 + 20);
+            g.drawString("Click Restart to play again", boardWidth/2 - 110, boardHeight/2 + 110);
         }
     }
 
